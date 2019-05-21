@@ -156,7 +156,6 @@ namespace detail {
         }
 
 
-
 		protected:
 			// protected because only the superclass knows the
 			// most efficient way to wrap read and write pos,
