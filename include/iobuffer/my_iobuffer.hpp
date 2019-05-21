@@ -57,10 +57,11 @@ namespace detail {
         span_guts(std::string& s)
             : m_begin(s.size() == 0 ? nullptr : &s[0])
             , m_end(s.size() == 0 ? nullptr : &s[0] + s.size()) {}
-
+		
+		// This constructor assumes it is OK to assume a terminator on the end of std::string
         span_guts(const std::string& s)
             : m_begin(s.size() == 0 ? nullptr : &s[0])
-            , m_end(s.size() == 0 ? nullptr : &s[0] + s.size()) {}
+            , m_end(s.size() == 0 ? nullptr : &s[0] + s.size() + sizeof(T)) {}
 
         inline ptrdiff_type available_read() const noexcept {
             return m_written - m_read;
@@ -137,6 +138,7 @@ namespace detail {
             T* tmp = nullptr;
             if (span_t::begin() == 0) {
                 tmp = static_cast<T*>(malloc(new_size * sizeof(T)));
+				memset(tmp, 0, new_size * sizeof(T));
                 if (!tmp) {
                     return MY_INVAL_BUF_SIZE;
                 }
@@ -153,11 +155,23 @@ namespace detail {
             return span_t::size();
         }
 
-		size_t write(const span_t_const& sp){
-			size_t write_size = min(sp.can_write(), sp.size());
 
+
+		protected:
+			// protected because only the superclass knows the
+			// most efficient way to wrap read and write pos,
+			// according to whether or not its pow2 sized buffer or not
+		size_t write(const span_t_const sp){
+			// FIXME: account for when we wrap
+
+			size_t space = this->can_write();
+			size_t write_size = min(sp.can_write(), space);
+			T* dest = begin() + m_written;
+			memcpy(dest, sp.cbegin(), write_size);
+			m_written += write_size;
 			return write_size;
 		}
+
     };
 
     template <typename T> class pow2_buffer : public malloc_buffer<T> {
@@ -165,7 +179,20 @@ namespace detail {
         typedef malloc_buffer<T> buf_t;
 
         public:
-        pow2_buffer(size_t size = 0) : buf_t(size == 0 ? 0 : nextPowerOf2(size)) {}
+        pow2_buffer(size_t size = 0) : buf_t(size == 0 ? 0 : nextPowerOf2(size)), m_writepos(0), m_readpos(0) {}
+
+		size_t write(const span_t_const sp){
+			size_t ret = buf_t::write(sp);
+			m_writepos += ret;
+			m_writepos %= size();
+			return ret;
+		}
+
+		 protected:
+			int m_writepos;
+			int m_readpos;
+
+
     };
 
     // a buffer that keeps track of read and write positions.
@@ -189,7 +216,7 @@ namespace detail {
 			return base_t::write(span);
         }
 
-        private:
+
     };
 } // namespace detail
 } // namespace my

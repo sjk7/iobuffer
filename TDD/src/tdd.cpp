@@ -48,8 +48,8 @@ int main() {
 
 	span_t_const string_span (const_hello);
 	size_t szw = buf.write(string_span);
-	/*/
-    buf.write(hello.c_str(), hello.size());
+	
+    buf.write( span_t_const(hello) );
 
     // read the whole buffer
 	typedef counted_buf_t::spans_t spans_t;
@@ -58,7 +58,7 @@ int main() {
     spans_t read_results;
 	int got = buf.read(spans, wanted, 0);
     // buf.write("Hello", 5);
-	/*/
+	
 
     return 0;
 }
