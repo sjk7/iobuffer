@@ -1,3 +1,5 @@
+
+#define DEBUG_BUF_PERF_
 #include "../../include/iobuffer/my_iobuffer.hpp"
 #include <iostream>
 
@@ -35,30 +37,32 @@ int main() {
     const std::string const_hello = "const hello";
     typedef my::detail::span<const char> rospan_t;
     rospan_t spwc(const_hello);
-    ASSERT(spwc.size() == 11);
+	const size_t ssize = spwc.size();
+    ASSERT(ssize == 12);
     cout << spwc.begin() << endl;
     std::string bak(spwc.begin());
     ASSERT(bak == const_hello);
     ASSERT(bak.size() == 11);
 
     typedef counted_buf_t::span_t_const span_t_const;
+	typedef counted_buf_t::spans_t_const spans_t_const;
 	typedef counted_buf_t::span_t span_t;
     span_t spw(hello);
     ASSERT(spw.size() == 5);
 
 	span_t_const string_span (const_hello);
 	size_t szw = buf.write(string_span);
-	
-    buf.write( span_t_const(hello) );
 
     // read the whole buffer
-	typedef counted_buf_t::spans_t spans_t;
+	typedef counted_buf_t::spans_t_const spans_t;
     int wanted = -1;
-	spans_t spans;
-    spans_t read_results;
-	int got = buf.read(spans, wanted, 0);
-    // buf.write("Hello", 5);
+	spans_t_const spans;
+    spans_t_const read_results;
+	int got = buf.read(spans, wanted);
 	
-
+	const int isz = spans[0].isize();
+	ASSERT(got == isz);
+	
+	cout << spans[0].begin() << endl;
     return 0;
 }

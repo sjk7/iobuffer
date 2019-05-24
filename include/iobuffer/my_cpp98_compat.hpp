@@ -51,7 +51,11 @@ static inline unsigned int nextPowerOf2(unsigned int n) {
 }
 
 #ifndef int64_t
-#define int64_t __int64 
+typedef  __int64 int64_t;
+#endif
+
+#ifndef uint64_t
+typedef unsigned __int64 uint64_t;
 #endif
 
 #ifndef ptrdiff_type
