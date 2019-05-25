@@ -48,7 +48,8 @@ int main() {
     typedef counted_buf_t::spans_t_const spans_t_const;
     typedef counted_buf_t::span_t span_t;
     span_t spw(hello);
-    ASSERT(spw.size() == 5);
+    size_t ms = spw.size();
+    ASSERT(ms == 6);
 
     span_t_const string_span(const_hello);
     size_t szw = buf.write(string_span);

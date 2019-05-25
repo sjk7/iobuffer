@@ -27,85 +27,106 @@ template <class T> const T& max(const T& a, const T& b) {
 }
 namespace detail {
 
-    template <typename T> struct span_guts {
-        protected:
-        T* m_begin;
+    template <typename T> struct ptrs {
+        T* m_beg;
         T* m_end;
+        ptrs(T* p, size_t sz) : m_beg(p), m_end(m_beg + sz) noexcept {}
+        ptrs(T* beg, T* end) : m_beg(beg), m_end(end) noexcept {
+            if (beg > end) ASSERT("end > begin" == nullptr);
+        }
 
-        typedef span_guts<T> self_type;
+        ptrs(const std::string& s)
+            : m_beg(s.size() == 0 ? nullptr : &s[0])
+            , m_end(s.size() == 0 ? nullptr : &s[0] + s.size() + 1) noexcept {}
+
+        ptrs(std::string& s)
+            : m_beg(s.size() == 0 ? nullptr : &s[0])
+            , m_end(s.size() == 0 ? nullptr : &s[0] + s.size() + 1) noexcept {}
+
+        inline size_t size() const noexcept { return (m_end - m_beg) / sizeof(T); }
+        inline size_t size_in_bytes() const noexcept { return m_end - m_beg; }
+        inline ptrdiff_type isize() const noexcept { return m_end - m_beg; }
+        inline ptrdiff_type ssize() const noexcept { return m_end - m_beg; }
+
+        inline T* begin() { return m_beg; }
+        inline T* end() { return m_end; }
+        inline const T* cbegin() const noexcept { return m_beg; }
+        inline const T* cend() const noexcept { return m_end; }
+        void clear() { m_beg = nullptr, m_end = nullptr; }
+        inline bool empty() const noexcept { return size() == 0; }
+    };
+
+    template <typename T> inline ptrs<T> ptrs_empty() {
+        T* n = 0;
+        ptrs<T> ps(n, n);
+        return ps;
+    }
+
+    template <typename T> struct span_guts : ptrs<T> {
+        protected:
+        typedef ptrs<T> base_t;
 
         public:
-        span_guts() : m_begin(nullptr), m_end(nullptr) {
+        using ptrs<T>::size;
+        span_guts() : base_t(ptrs_empty<T>()) {
 #ifdef DEBUG_BUF_PERF_
             TRACE("span_guts constructor [default]\n");
 #endif
         }
 
-        span_guts(T* ptr, const size_t sz) : m_begin(ptr), m_end(ptr + sz) {
+        span_guts(T* ptr, const size_t sz) : base_t(ptr, sz) {
 #ifdef DEBUG_BUF_PERF_
             TRACE("span_guts constructor [ptr, size_t]\n");
 #endif
         }
 
-        span_guts(T* beg, T* end) : m_begin(beg), m_end(end) {
-            if (m_begin > m_end) ASSERT("my::span: end > begin" == nullptr);
+#ifdef CPP11
+        span_guts(span_guts&& rhs) {
+#ifdef DEBUG_BUF_PERF_
+            TRACE("span_guts move constructor [ptr, size_t]\n");
+#endif
+            using namespace std;
+            std::move(rhs.m_begin, m_begin);
+            std::move(rhs.m_end, m_end);
+        }
+#endif
+
+#ifdef CPP11
+        span_guts& operator=(span_guts&& rhs) {
+#ifdef DEBUG_BUF_PERF_
+            TRACE("span_guts move assign constructor [ptr, size_t]\n");
+#endif
+            using namespace std;
+            std::move(rhs.m_begin, m_begin);
+            std::move(rhs.m_end, m_end);
+        }
+#endif
+
+        span_guts(T* beg, T* end) : base_t(beg, end) {
+
 #ifdef DEBUG_BUF_PERF_
             TRACE("span_guts constructor [beg, end]\n");
 #endif
         }
 
-        span_guts(std::string& s)
-            : m_begin(s.size() == 0 ? nullptr : &s[0])
-            , m_end(s.size() == 0 ? nullptr : &s[0] + s.size()) {
-
-#ifdef DEBUG_BUF_PERF_
-            TRACE("span_guts constructor [std::string&]\n");
-#endif
-        }
+        span_guts(std::string& s) : base_t(s) noexcept {}
 
         // This constructor assumes it is OK to assume a terminator on the end of
         // std::string
-        span_guts(const std::string& s)
-            : m_begin(s.size() == 0 ? nullptr : &s[0])
-            , m_end(s.size() == 0 ? nullptr : &s[0] + s.size() + sizeof(T)) {
-
-#ifdef DEBUG_BUF_PERF_
-            TRACE("span_guts constructor [const std::string&]\n");
-#endif
-        }
-
-        span_guts(const span_guts& rhs) : m_begin(rhs.m_begin), m_end(rhs.m_end) {
-
-#ifdef DEBUG_BUF_PERF_
-            TRACE("span_guts copy constructor\n");
-#endif
-        }
+        span_guts(const std::string& s) : base_t(s) noexcept {}
+        span_guts(const span_guts& rhs) : base_t(rhs) noexcept {}
 
         span_guts& operator=(const span_guts& rhs) {
 #ifdef DEBUG_BUF_PERF_
-            TRACE("span_guts copy\n");
+            TRACE("span_guts assignment\n");
 #endif
-            this->m_begin = rhs.m_begin;
-            this->m_end = rhs.m_end;
+            base_t::m_beg = rhs.m_beg;
+            base_t::m_end = rhs.m_end;
             return *this;
         }
+        // void clear() { span_guts<T>::clear(); }
 
-        inline size_t size_in_bytes() const noexcept { return m_end - m_begin; }
-        inline size_t size() const noexcept { return size_in_bytes() / sizeof(T); }
-        inline int isize() const noexcept { return static_cast<int>(size()); }
-        inline ptrdiff_type ssize() const noexcept { return m_end - m_begin; }
-
-        inline T* begin() { return m_begin; }
-        inline T* end() { return m_end; }
-        inline const T* cbegin() const noexcept { return m_begin; }
-        inline const T* cend() const noexcept { return m_end; }
-        void clear() {
-            m_begin = nullptr;
-            m_end = nullptr;
-        }
-
-        inline bool empty() const noexcept { return size() == 0; }
-    };
+    }; // span_guts<T>
 
     // treat this like 2 pointers and a type, basically
     template <typename T> struct span : span_guts<T> {
@@ -115,9 +136,10 @@ namespace detail {
         typedef span<T> my_type;
 
         public:
+        using span_guts<T>::size;
         span() {}
         explicit span(std::string& s) : guts_t(s) {}
-        span(const std::string& s) : guts_t(s) {}
+        explicit span(const std::string& s) : guts_t(s) {}
         span(T* data, const size_t sz) : guts_t(data, sz) {}
         span(T* beg, T* end) : guts_t(beg, end) {}
     };
@@ -157,7 +179,7 @@ namespace detail {
                 }
             }
 
-            span_t::m_begin = tmp;
+            span_t::m_beg = tmp;
             span_t::m_end = tmp + new_size;
 
             return span_t::size();
@@ -195,7 +217,7 @@ namespace detail {
             : buf_t(size == 0 ? 0 : nextPowerOf2(size))
             , m_ctrs(make_buf_ctrs(buf_t::size())) {}
 
-        inline size_t write(const span_t_const sp) {
+        inline size_t write(const span_t_const& sp) {
 
             size_t space = this->can_write();
             size_t write_size = min(sp.size(), space);
@@ -214,7 +236,8 @@ namespace detail {
 
         // returns pointers to my internal memory.
         // For multithreaded use, you probably want to (*copy*) the memory into your own.
-        inline size_t read(spans_t_const& results, int how_many, int idx = 0) const {
+        inline size_t read(spans_t_const& results, int how_many, int idx = 0) const
+            noexcept {
             ASSERT(idx < 2);
             if (how_many < 0) {
                 how_many = this->can_read();

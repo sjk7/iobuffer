@@ -1,9 +1,9 @@
 TEMPLATE = app
-CONFIG += console c++11
+CONFIG += console c++98
 CONFIG -= app_bundle
 CONFIG -= qt
 
-QMAKE_CXXFLAGS += -std=c++11
+QMAKE_CXXFLAGS += -std=c++98
 SOURCES += \
         ../src/tdd.cpp
 HEADERS += \
