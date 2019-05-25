@@ -3,6 +3,16 @@
 // my_cpp_98_compat.hpp
 #include <cassert>
 
+#ifdef _MSC_VER
+#if _MSC_VER > 1200
+#define NO_INCLUDE_STDINT
+#endif
+#endif
+
+#if __cplusplus >= 201103L
+#define CPP11
+#else
+
 #ifndef constexpr
 #define constexpr
 #endif
@@ -11,12 +21,25 @@
 #define noexcept
 #endif
 
+#ifndef nullptr
+#define nullptr 0
+#endif
+#endif
+
+#ifndef NO_INCLUDE_STDINT
+#include <stdint.h>
+#endif
+
+#ifndef CAST
+#define CAST(type, val) static_cast<type>(val)
+#endif
+
 #ifndef _MSC_VER
 #ifndef TRACE
 #define TRACE printf
 #endif
 #else
-#ifndef TRACE 
+#ifndef TRACE
 #ifndef NOMINMAX
 #define NOMINMAX
 #endif
@@ -29,10 +52,6 @@
 
 #ifndef ASSERT
 #define ASSERT assert
-#endif
-
-#ifndef nullptr
-#define nullptr 0
 #endif
 
 static inline unsigned int nextPowerOf2(unsigned int n) {
@@ -50,18 +69,18 @@ static inline unsigned int nextPowerOf2(unsigned int n) {
     return 1 << count;
 }
 
+#ifndef ptrdiff_type
+#ifdef _MSC_VER
+#if _MSC_VER <= 1200
+#define ptrdiff_type int
+
 #ifndef int64_t
-typedef  __int64 int64_t;
+typedef __int64 int64_t;
 #endif
 
 #ifndef uint64_t
 typedef unsigned __int64 uint64_t;
 #endif
-
-#ifndef ptrdiff_type
-#ifdef _MSC_VER 
-	#if _MSC_VER <= 1200
-	#define ptrdiff_type int
 #endif
 #else
 
