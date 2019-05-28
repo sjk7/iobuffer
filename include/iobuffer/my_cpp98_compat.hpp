@@ -4,7 +4,7 @@
 #include <cassert>
 
 #ifdef _MSC_VER
-#if _MSC_VER > 1200
+#if _MSC_VER <= 1200
 #define NO_INCLUDE_STDINT
 #endif
 #endif
